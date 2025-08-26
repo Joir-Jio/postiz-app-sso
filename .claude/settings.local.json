@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npm --version)",
+      "Bash(pnpm:*)",
+      "Bash(cp:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(pnpx prisma:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(nest start:*)",
+      "Bash(npx dotenv-cli:*)",
+      "Read(/C:\\c\\Users\\Admin\\zjl\\postiz-app-sso/**)",
+      "Read(/C:\\c\\Users\\Admin\\zjl\\postiz-app-sso/**)",
+      "Read(/C:\\c\\Users\\Admin\\zjl\\postiz-app-sso/**)",
+      "Bash(dotenv:*)",
+      "Bash(npx nest:*)",
+      "Bash(npx @nestjs/cli:*)",
+      "Bash(curl:*)",
+      "Bash(npm rebuild:*)",
+      "Bash(taskkill:*)",
+      "Bash(telnet:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\c\\Users\\Admin\\zjl\\postiz-app-sso\\postiz-app-sso\\apps",
+      "C:\\c\\Users\\Admin\\zjl\\postiz-app-sso"
+    ]
+  }
+}

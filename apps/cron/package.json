@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "dev": "dotenv -e ../../.env -- nest start --watch --entryFile=./apps/cron/src/main",
-    "build": "cross-env NODE_ENV=production nest build",
-    "start": "dotenv -e ../../.env -- node ./dist/apps/cron/src/main.js",
+    "dev": "npx dotenv-cli -f ../../.env -- node ../../node_modules/@nestjs/cli/bin/nest.js start --watch --entryFile=./apps/cron/src/main",
+    "build": "cross-env NODE_ENV=production node ../../node_modules/@nestjs/cli/bin/nest.js build",
+    "start": "npx dotenv-cli -f ../../.env -- node ./dist/apps/cron/src/main.js",
     "pm2": "pm2 start pnpm --name cron -- start"
   },
   "keywords": [],
