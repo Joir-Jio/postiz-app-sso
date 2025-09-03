@@ -17,19 +17,43 @@ import { ConfigurationChecker } from '@gitroom/helpers/configuration/configurati
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
-    cors: {
-      ...(!process.env.NOT_SECURED ? { credentials: true } : {}),
-      exposedHeaders: [
-        'reload',
-        'onboarding',
-        'activate',
-        ...(process.env.NOT_SECURED ? ['auth', 'showorg', 'impersonate'] : []),
-      ],
-      origin: [
-        process.env.FRONTEND_URL,
-        ...(process.env.MAIN_URL ? [process.env.MAIN_URL] : []),
-      ],
-    },
+    cors: false, // Disable built-in CORS so we can handle it manually
+  });
+
+  // Manual CORS handler to ensure Access-Control-Allow-Credentials is set
+  app.use('/user/self', (req: any, res: any, next: any) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,auth');
+    
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send();
+    }
+    next();
+  });
+
+  // General CORS handler
+  app.use((req: any, res: any, next: any) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [process.env.FRONTEND_URL, process.env.MAIN_URL].filter(Boolean);
+    
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin,auth');
+    res.header('Access-Control-Expose-Headers', [
+      'reload', 'onboarding', 'activate',
+      ...(process.env.NOT_SECURED ? ['auth', 'showorg', 'impersonate'] : []),
+    ].join(','));
+    
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send();
+    }
+    next();
   });
 
   app.useGlobalPipes(

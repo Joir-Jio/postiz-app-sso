@@ -1,11 +1,94 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration for Postiz SSO system
+# Automated dependency updates with security focus and testing integration
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # Root package.json dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "@postiz-team"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    labels:
+      - "dependencies"
+      - "automated"
+    # Run tests before merging
+    rebase-strategy: "auto"
+    
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/apps/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@postiz-team"
+    commit-message:
+      prefix: "frontend-deps"
+    labels:
+      - "frontend"
+      - "dependencies"
+      - "automated"
+    rebase-strategy: "auto"
+    
+  # Backend dependencies  
+  - package-ecosystem: "npm"
+    directory: "/apps/backend"
+    schedule:
+      interval: "weekly" 
+      day: "monday"
+      time: "08:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@postiz-team"
+    commit-message:
+      prefix: "backend-deps"
+    labels:
+      - "backend"
+      - "dependencies"
+      - "automated"
+    rebase-strategy: "auto"
+    
+  # Security updates (daily, higher priority)
+  - package-ecosystem: "npm"
+    directory: "/"
     schedule:
       interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 20
+    reviewers:
+      - "@postiz-team"
+    commit-message:
+      prefix: "security"
+    labels:
+      - "security"
+      - "dependencies" 
+      - "priority-high"
+    target-branch: "main"
+    rebase-strategy: "auto"
+    
+  # GitHub Actions updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "@postiz-team"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "ci/cd"
+      - "automated"
+    rebase-strategy: "auto"

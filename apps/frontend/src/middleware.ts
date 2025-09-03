@@ -15,9 +15,28 @@ acceptLanguage.languages(languages);
 export async function middleware(request: NextRequest) {
   const nextUrl = request.nextUrl;
   const authCookie =
-    request.cookies.get('auth') ||
+    request.cookies.get('auth')?.value ||
     request.headers.get('auth') ||
+    request.headers.get('authorization')?.replace('Bearer ', '') ||
     nextUrl.searchParams.get('loggedAuth');
+  
+  // Enhanced debug logging for SSO authentication
+  if (nextUrl.pathname === '/launches' || nextUrl.pathname.startsWith('/seamless-login')) {
+    console.log('🔍 Middleware Debug:', {
+      pathname: nextUrl.pathname,
+      hasCookie: !!request.cookies.get('auth'),
+      cookieValue: request.cookies.get('auth')?.value ? 
+        request.cookies.get('auth')?.value?.substring(0, 50) + '...' : 'none',
+      hasAuthCookie: !!authCookie,
+      authSource: authCookie ? (
+        request.cookies.get('auth')?.value ? 'cookie' :
+        request.headers.get('auth') ? 'header-auth' :
+        request.headers.get('authorization') ? 'header-authorization' :
+        'url-param'
+      ) : 'none',
+      allCookies: request.cookies.toString(),
+    });
+  }
   const lng = request.cookies.has(cookieName)
     ? acceptLanguage.get(request.cookies.get(cookieName).value)
     : acceptLanguage.get(
@@ -64,7 +83,14 @@ export async function middleware(request: NextRequest) {
 
   const org = nextUrl.searchParams.get('org');
   const url = new URL(nextUrl).search;
+  // Skip auth redirect for SSO-related paths but still allow processing
+  if (nextUrl.pathname.startsWith('/seamless-login') || nextUrl.pathname.startsWith('/sso')) {
+    console.log('🔐 SSO path detected:', nextUrl.pathname, 'authCookie:', !!authCookie);
+    return topResponse;
+  }
+
   if (nextUrl.href.indexOf('/auth') === -1 && !authCookie) {
+    console.log('⚠️  No auth cookie found, redirecting to auth. Path:', nextUrl.pathname);
     const providers = ['google', 'settings'];
     const findIndex = providers.find((p) => nextUrl.href.indexOf(p) > -1);
     const additional = !findIndex
@@ -83,6 +109,7 @@ export async function middleware(request: NextRequest) {
 
   // If the url is /auth and the cookie exists, redirect to /
   if (nextUrl.href.indexOf('/auth') > -1 && authCookie) {
+    console.log('✅ Auth cookie found, redirecting from auth page to home');
     return NextResponse.redirect(new URL(`/${url}`, nextUrl.href));
   }
   if (nextUrl.href.indexOf('/auth') > -1 && !authCookie) {

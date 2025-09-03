@@ -54,8 +54,49 @@ export class MediaService {
     return this._mediaRepository.saveFile(org, fileName, filePath);
   }
 
-  getMedia(org: string, page: number) {
-    return this._mediaRepository.getMedia(org, page);
+  async getMedia(org: string, page: number) {
+    console.log(`🔍 MediaService.getMedia called for org: ${org}, page: ${page}`);
+    const media = await this._mediaRepository.getMedia(org, page);
+    console.log(`📊 Raw media from database:`, media?.results?.length || 0, 'items');
+    
+    // Convert GCS URLs to signed URLs for secure access  
+    const mediaItems = media?.results || media;
+    console.log(`🔍 Processing media items:`, typeof mediaItems, Array.isArray(mediaItems));
+    
+    if (mediaItems && Array.isArray(mediaItems)) {
+      for (const item of mediaItems) {
+        if (item.path && item.path.includes('storage.cloud.google.com')) {
+          try {
+            console.log(`🔐 Converting to signed URL: ${item.path}`);
+            // Extract bucket and file path
+            const urlParts = item.path.replace('https://storage.cloud.google.com/', '').split('/');
+            const bucket = urlParts[0];
+            const filePath = urlParts.slice(1).join('/');
+            
+            // Generate signed URL using our storage service
+            const { Storage } = await import('@google-cloud/storage');
+            const storage = new Storage({
+              keyFilename: process.env.GCS_KEY_FILENAME,
+              projectId: process.env.GCS_PROJECT_ID,
+            });
+            
+            const file = storage.bucket(bucket).file(filePath);
+            const [signedUrl] = await file.getSignedUrl({
+              action: 'read',
+              expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+              version: 'v4',
+            });
+            
+            item.path = signedUrl;
+            console.log(`✅ Generated signed URL for media: ${signedUrl.substring(0, 100)}...`);
+          } catch (error) {
+            console.error(`❌ Failed to generate signed URL for ${item.path}:`, (error as any)?.message);
+          }
+        }
+      }
+    }
+    
+    return media;
   }
 
   saveMediaInformation(org: string, data: SaveMediaInformationDto) {

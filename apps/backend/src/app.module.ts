@@ -13,6 +13,7 @@ import { ThirdPartyModule } from '@gitroom/nestjs-libraries/3rdparties/thirdpart
 import { VideoModule } from '@gitroom/nestjs-libraries/videos/video.module';
 import { SentryModule } from "@sentry/nestjs/setup";
 import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
+// import { SsoModule } from '@gitroom/backend/services/sso/sso.module'; // 暂时禁用，存在依赖问题
 
 @Global()
 @Module({
@@ -26,6 +27,8 @@ import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
     McpModule,
     ThirdPartyModule,
     VideoModule,
+    // SSO Module - Multi-product authentication system (暂时禁用，存在依赖问题)
+    // SsoModule,
     ThrottlerModule.forRoot([
       {
         ttl: 3600000,
@@ -53,6 +56,8 @@ import { FILTER } from '@gitroom/nestjs-libraries/sentry/sentry.exception';
     AgentModule,
     McpModule,
     ThrottlerModule,
+    // Export SSO Module for external usage (暂时禁用，存在依赖问题)  
+    // SsoModule,
   ],
 })
 export class AppModule {}

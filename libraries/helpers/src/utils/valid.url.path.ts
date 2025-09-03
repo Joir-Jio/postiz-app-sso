@@ -7,12 +7,21 @@ import {
 @ValidatorConstraint({ name: 'checkValidExtension', async: false })
 export class ValidUrlExtension implements ValidatorConstraintInterface {
   validate(text: string, args: ValidationArguments) {
+    if (!text) return false;
+    
+    // Extract the pathname without query parameters
+    let pathname = text;
+    const questionMarkIndex = text.indexOf('?');
+    if (questionMarkIndex !== -1) {
+      pathname = text.substring(0, questionMarkIndex);
+    }
+    
     return (
-      text?.endsWith('.png') ||
-      text?.endsWith('.jpg') ||
-      text?.endsWith('.jpeg') ||
-      text?.endsWith('.gif') ||
-      text?.endsWith('.mp4')
+      pathname.endsWith('.png') ||
+      pathname.endsWith('.jpg') ||
+      pathname.endsWith('.jpeg') ||
+      pathname.endsWith('.gif') ||
+      pathname.endsWith('.mp4')
     );
   }
 

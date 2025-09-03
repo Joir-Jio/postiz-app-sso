@@ -190,41 +190,121 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
   ): Promise<PostResponse[]> {
     const [firstPost, ...comments] = postDetails;
 
+    console.log(`🎥 YouTube upload started for post ID: ${id}`);
+    console.log(`📋 Post details:`, {
+      mediaPath: firstPost?.media?.[0]?.path,
+      title: firstPost.settings?.title,
+      privacyStatus: firstPost.settings?.type,
+      messageLength: firstPost?.message?.length
+    });
+
     const { client, youtube } = clientAndYoutube();
     client.setCredentials({ access_token: accessToken });
     const youtubeClient = youtube(client);
 
     const { settings }: { settings: YoutubeSettingsDto } = firstPost;
 
-    const response = await axios({
-      url: firstPost?.media?.[0]?.path,
-      method: 'GET',
-      responseType: 'stream',
+    // Generate signed URL for private GCS bucket access
+    let videoUrl = firstPost?.media?.[0]?.path;
+    console.log(`🌐 Original video URL: ${videoUrl}`);
+    
+    // If this is a GCS URL without signature, generate signed URL
+    if (videoUrl?.includes('storage.googleapis.com') && !videoUrl.includes('X-Goog-Algorithm')) {
+      console.log(`🔐 Generating signed URL for private GCS access...`);
+      try {
+        // Extract the bucket and file path from the URL
+        const urlParts = videoUrl.replace('https://storage.googleapis.com/', '').split('/');
+        const bucket = urlParts[0];
+        const filePath = urlParts.slice(1).join('/');
+        
+        console.log(`📋 GCS details: bucket=${bucket}, filePath=${filePath}`);
+        
+        // Import GCS and generate signed URL
+        const { Storage } = await import('@google-cloud/storage');
+        const storage = new Storage({
+          keyFilename: process.env.GCS_KEY_FILENAME,
+          projectId: process.env.GCS_PROJECT_ID,
+        });
+        
+        const file = storage.bucket(bucket).file(filePath);
+        const [signedUrl] = await file.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          version: 'v4',
+        });
+        
+        videoUrl = signedUrl;
+        console.log(`✅ Generated signed URL: ${signedUrl.substring(0, 150)}...`);
+      } catch (signError) {
+        console.error(`❌ Failed to generate signed URL:`, (signError as any)?.message);
+        console.log(`⚠️  Continuing with original URL (may fail)`);
+      }
+    }
+    
+    console.log(`🌐 Fetching video from: ${videoUrl}`);
+    
+    let response;
+    try {
+      response = await axios({
+        url: videoUrl,
+        method: 'GET',
+        responseType: 'stream',
+        timeout: 60000, // Increase timeout to 60 seconds
+      });
+      
+      console.log(`✅ Video fetch successful. Content-Type: ${response.headers['content-type']}, Content-Length: ${response.headers['content-length']}`);
+      
+    } catch (fetchError) {
+      console.error(`❌ Failed to fetch video from GCS:`, fetchError);
+      throw new Error(`Failed to fetch video: ${(fetchError as any)?.message || fetchError}`);
+    }
+
+    console.log(`📤 Starting YouTube API upload...`);
+    console.log(`📋 Upload settings:`, {
+      title: settings.title,
+      privacyStatus: settings.type,
+      tags: settings?.tags?.map((p) => p.label) || [],
+      hasDescription: !!firstPost?.message,
+      hasThumbnail: !!settings?.thumbnail?.path
     });
 
     const all: GaxiosResponse<Schema$Video> = await this.runInConcurrent(
-      async () =>
-        youtubeClient.videos.insert({
-          part: ['id', 'snippet', 'status'],
-          notifySubscribers: true,
-          requestBody: {
-            snippet: {
-              title: settings.title,
-              description: firstPost?.message,
-              ...(settings?.tags?.length
-                ? { tags: settings.tags.map((p) => p.label) }
-                : {}),
+      async () => {
+        try {
+          return await youtubeClient.videos.insert({
+            part: ['id', 'snippet', 'status'],
+            notifySubscribers: true,
+            requestBody: {
+              snippet: {
+                title: settings.title,
+                description: firstPost?.message,
+                ...(settings?.tags?.length
+                  ? { tags: settings.tags.map((p) => p.label) }
+                  : {}),
+              },
+              status: {
+                privacyStatus: settings.type,
+              },
             },
-            status: {
-              privacyStatus: settings.type,
+            media: {
+              body: response.data,
             },
-          },
-          media: {
-            body: response.data,
-          },
-        }),
+          });
+        } catch (uploadError) {
+          console.error(`❌ YouTube API upload failed:`, {
+            error: (uploadError as any)?.message,
+            status: (uploadError as any)?.status,
+            statusText: (uploadError as any)?.statusText,
+            data: (uploadError as any)?.response?.data
+          });
+          throw uploadError;
+        }
+      },
       true
     );
+
+    console.log(`✅ YouTube upload completed. Video ID: ${all?.data?.id}`);
+    console.log(`🔗 Video URL: https://www.youtube.com/watch?v=${all?.data?.id}`);
 
     if (settings?.thumbnail?.path) {
       await this.runInConcurrent(async () =>

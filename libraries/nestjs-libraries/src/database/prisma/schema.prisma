@@ -41,6 +41,10 @@ model Organization {
   sets              Sets[]
   thirdParty        ThirdParty[]
   errors            Errors[]
+  
+  // SSO Multi-Product Relations
+  productUsers      ProductUser[]
+  mediaReferences   MediaReference[]
 }
 
 model Tags {
@@ -104,6 +108,9 @@ model User {
   agencies              SocialMediaAgency[]
   ip                    String?
   agent                 String?
+  
+  // SSO Multi-Product Relations
+  productUsers          ProductUser[]
 
   @@unique([email, providerName])
   @@index([lastReadNotifications])
@@ -725,4 +732,349 @@ enum APPROVED_SUBMIT_FOR_ORDER {
   NO
   WAITING_CONFIRMATION
   YES
+}
+
+// ===== SECURE SSO MULTI-PRODUCT TABLES =====
+
+model SaasProduct {
+  id                     String             @id @default(uuid())
+  productKey             String             @unique
+  productName            String
+  productDescription     String?
+  baseUrl                String
+  apiKeyHash             String?            // Hashed API key for security
+  webhookSecret          String?            // Encrypted webhook secret
+  
+  // SSO Configuration
+  ssoEnabled             Boolean            @default(false)
+  ssoRedirectUrl         String?
+  allowedDomains         String[]           @default([])
+  
+  // GCS Configuration
+  gcsBucketName          String?
+  gcsBasePath            String?
+  gcsCredentialsHash     String?            // Encrypted GCS credentials
+  
+  // Security Settings
+  settings               Json               @default("{}")
+  metadata               Json               @default("{}")
+  autoCreateUsers        Boolean            @default(false)
+  allowMediaUpload       Boolean            @default(false)
+  dataIsolationEnabled   Boolean            @default(true)
+  
+  // Rate Limiting & Security
+  rateLimitRpm           Int                @default(1000)
+  maxFileSize            BigInt             @default(104857600) // 100MB
+  allowedMimeTypes       String[]           @default(["image/jpeg", "image/png", "video/mp4"])
+  
+  // Trust Domain Configuration  
+  trustDomains           String[]           @default([])
+  jwtSigningKeyHash      String?            // Encrypted JWT signing key
+  tokenExpiryMinutes     Int                @default(60)
+  refreshExpiryDays      Int                @default(30)
+  
+  status                 ProductStatus      @default(ACTIVE)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+  
+  // Relations
+  productUsers           ProductUser[]
+  mediaReferences        MediaReference[]
+  userGcsMappings        UserGcsMapping[]
+  securityEvents         SecurityEvent[]
+  tokenBlacklist         TokenBlacklist[]
+
+  @@index([productKey])
+  @@index([status])
+  @@index([ssoEnabled])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+
+model ProductUser {
+  id                     String             @id @default(uuid())
+  productId              String
+  product                SaasProduct        @relation(fields: [productId], references: [id])
+  userId                 String
+  user                   User               @relation(fields: [userId], references: [id])
+  organizationId         String
+  organization           Organization       @relation(fields: [organizationId], references: [id])
+  
+  // External Product User Data
+  externalUserId         String
+  externalUserEmail      String
+  externalUserName       String?
+  externalUserMetadata   Json               @default("{}")
+  
+  // SSO Session Management
+  ssoSessionId           String?
+  ssoSessionHash         String?            // Hashed session ID for security
+  lastSsoLogin           DateTime?
+  ssoTokenHash           String?            // Hashed current token
+  
+  // User Settings & Permissions
+  preferences            Json               @default("{}")
+  permissions            Json               @default("{}")
+  dataAccessLevel        DataAccessLevel    @default(LIMITED)
+  
+  // SSO Service Required Fields
+  metadata               Json               @default("{}")    // Used by SSO services for user mapping
+  status                 String             @default("active") // active, suspended, merged, deleted
+  
+  // Security & Audit
+  isActive               Boolean            @default(true)
+  lastActivity           DateTime           @default(now())
+  loginCount             Int                @default(0)
+  failedLoginAttempts    Int                @default(0)
+  lockedUntil            DateTime?
+  
+  // IP and Device Tracking for Security
+  lastLoginIp            String?
+  lastLoginUserAgent     String?
+  knownDevices           Json               @default("[]")
+  
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+  
+  // Relations
+  mediaReferences        MediaReference[]
+  userGcsMappings        UserGcsMapping[]
+  securityEvents         SecurityEvent[]
+
+  @@unique([productId, userId, organizationId])
+  @@unique([productId, externalUserId])
+  @@index([productId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([externalUserId])
+  @@index([status])
+  @@index([isActive])
+  @@index([lastActivity])
+  @@index([ssoSessionHash])
+  @@index([deletedAt])
+}
+
+model UserGcsMapping {
+  id                     String             @id @default(uuid())
+  productUserId          String
+  productUser            ProductUser        @relation(fields: [productUserId], references: [id])
+  productId              String
+  product                SaasProduct        @relation(fields: [productId], references: [id])
+  
+  // SSO Service Required Fields
+  userId                 String             // Required by user-mapping service
+  organizationId         String             // Required for user context
+  productKey             String             // Product identifier
+  
+  // File Storage Information
+  gcsPath                String
+  localPath              String?            // Made optional as it might not always be set
+  bucketName             String?            // Made optional as it might not always be set
+  fileHash               String?            // SHA-256 hash of file content - made optional
+  fileSize               BigInt?            // Made optional
+  mimeType               String?            // Made optional
+  
+  // Security & Access Control
+  isPublic               Boolean            @default(false)
+  encryptedMetadata      String?            // Encrypted access metadata
+  accessLevel            String             @default("read")
+  allowedIps             String[]           @default([])
+  permissions            String[]           @default([])  // Used by user-mapping service
+  
+  // Expiry & Lifecycle
+  expiresAt              DateTime?
+  accessCount            Int                @default(0)
+  lastAccessed           DateTime?
+  
+  // Virus & Content Scanning
+  virusScanStatus        String             @default("pending") // pending, clean, infected, error
+  virusScanAt            DateTime?
+  contentScanStatus      String             @default("pending") // pending, approved, rejected, manual_review
+  contentScanAt          DateTime?
+  
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+
+  @@unique([productUserId, gcsPath])
+  @@index([productUserId])
+  @@index([productId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([productKey])
+  @@index([fileHash])
+  @@index([gcsPath])
+  @@index([isPublic])
+  @@index([expiresAt])
+  @@index([virusScanStatus])
+  @@index([contentScanStatus])
+  @@index([deletedAt])
+}
+
+model MediaReference {
+  id                     String             @id @default(uuid())
+  productUserId          String
+  productUser            ProductUser        @relation(fields: [productUserId], references: [id])
+  productId              String
+  product                SaasProduct        @relation(fields: [productId], references: [id])
+  organizationId         String
+  organization           Organization       @relation(fields: [organizationId], references: [id])
+  
+  // Media Information
+  externalMediaId        String
+  mediaType              String
+  originalUrl            String
+  gcsPath                String?
+  thumbnailPath          String?
+  
+  // Media Properties
+  fileSize               BigInt?
+  mimeType               String?
+  width                  Int?
+  height                 Int?
+  duration               Float?             // in seconds for video/audio
+  
+  // Processing Status
+  isProcessed            Boolean            @default(false)
+  processingStatus       String             @default("pending")
+  processingError        String?
+  processedAt            DateTime?
+  
+  // Security & Content Moderation
+  contentModerationScore Float?             // 0.0 to 1.0, higher = more concerning
+  moderationFlags        String[]           @default([])
+  isApproved             Boolean            @default(false)
+  approvedBy             String?
+  approvedAt             DateTime?
+  
+  // Encrypted Metadata
+  encryptedMetadata      String?
+  
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  deletedAt              DateTime?
+
+  @@unique([productUserId, externalMediaId])
+  @@index([productUserId])
+  @@index([productId])
+  @@index([organizationId])
+  @@index([mediaType])
+  @@index([isProcessed])
+  @@index([processingStatus])
+  @@index([isApproved])
+  @@index([contentModerationScore])
+  @@index([deletedAt])
+}
+
+// Security & Audit Tables
+
+model SecurityEvent {
+  id                     String             @id @default(uuid())
+  productId              String?
+  product                SaasProduct?       @relation(fields: [productId], references: [id])
+  productUserId          String?
+  productUser            ProductUser?       @relation(fields: [productUserId], references: [id])
+  
+  // Event Details
+  eventType              String             // login, logout, token_refresh, access_denied, etc.
+  severity               String             @default("info") // info, warning, error, critical
+  description            String
+  
+  // Request Context
+  ipAddress              String
+  userAgent              String?
+  requestPath            String?
+  requestMethod          String?
+  
+  // Security Context
+  riskScore              Float?             @default(0.0) // 0.0 to 1.0
+  blocked                Boolean            @default(false)
+  reason                 String?
+  
+  // Additional Data
+  metadata               Json               @default("{}")
+  
+  createdAt              DateTime           @default(now())
+
+  @@index([productId])
+  @@index([productUserId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@index([blocked])
+  @@index([riskScore])
+}
+
+model TokenBlacklist {
+  id                     String             @id @default(uuid())
+  productId              String
+  product                SaasProduct        @relation(fields: [productId], references: [id])
+  
+  // Token Information
+  tokenHash              String             @unique // SHA-256 hash of the token
+  tokenType              String             // access, refresh, trust_domain
+  jwtId                  String             // JWT ID claim
+  
+  // Blacklist Reason
+  reason                 String             // revoked, compromised, expired, user_disabled
+  revokedBy              String?            // admin user ID who revoked
+  
+  // Token Metadata
+  userId                 String?
+  expiresAt              DateTime
+  
+  createdAt              DateTime           @default(now())
+
+  @@index([tokenHash])
+  @@index([productId])
+  @@index([tokenType])
+  @@index([jwtId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+// Rate Limiting Table
+model RateLimit {
+  id                     String             @id @default(uuid())
+  
+  // Rate Limit Key (IP + Product + Endpoint combination)
+  limitKey               String             @unique
+  
+  // Rate Limit Data
+  requestCount           Int                @default(1)
+  windowStart            DateTime           @default(now())
+  windowEnd              DateTime
+  
+  // Context
+  ipAddress              String
+  productId              String?
+  endpoint               String?
+  userId                 String?
+  
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([limitKey])
+  @@index([ipAddress])
+  @@index([windowEnd])
+  @@index([createdAt])
+}
+
+// Enums for SSO System
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_REVIEW
+}
+
+enum DataAccessLevel {
+  FULL
+  LIMITED
+  READ_ONLY
+  MEDIA_ONLY
 }

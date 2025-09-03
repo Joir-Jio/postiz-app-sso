@@ -1,0 +1,188 @@
+# Postiz SSO AWS Infrastructure Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# =============================================================================
+# ENVIRONMENT CONFIGURATION
+# =============================================================================
+
+environment = "production"  # Options: development, staging, production
+aws_region  = "us-east-1"   # Primary AWS region for deployment
+
+# =============================================================================
+# DOMAIN CONFIGURATION
+# =============================================================================
+
+domain_name = "postiz.yourdomain.com"  # Your application domain
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+vpc_cidr = "10.0.0.0/16"  # VPC CIDR block
+
+# Allowed CIDR blocks for access (restrict as needed)
+allowed_cidr_blocks = ["0.0.0.0/0"]  # Use specific IPs/ranges in production
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+
+db_name     = "postiz"
+db_username = "postiz_admin"
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+
+# Generate these with: openssl rand -hex 32
+jwt_secret     = "your-super-secret-jwt-key-32-chars-minimum-change-this"
+encryption_key = "your-encryption-key-32-chars-minimum-change-this"
+
+# =============================================================================
+# EXTERNAL SERVICES - SOCIAL MEDIA API KEYS
+# =============================================================================
+
+# Twitter/X API Configuration
+twitter_client_id     = "your-twitter-client-id"
+twitter_client_secret = "your-twitter-client-secret"
+
+# Facebook/Meta API Configuration
+facebook_client_id     = "your-facebook-app-id"
+facebook_client_secret = "your-facebook-app-secret"
+
+# LinkedIn API Configuration
+linkedin_client_id     = "your-linkedin-client-id"
+linkedin_client_secret = "your-linkedin-client-secret"
+
+# YouTube API Configuration
+youtube_client_id     = "your-youtube-client-id"
+youtube_client_secret = "your-youtube-client-secret"
+
+# =============================================================================
+# GOOGLE CLOUD STORAGE CONFIGURATION (Mixed Cloud Strategy)
+# =============================================================================
+
+# Leave empty to disable GCS integration
+gcs_project_id           = "your-gcp-project-id"
+gcs_bucket_name         = "your-gcs-bucket-name"
+gcs_service_account_key = ""  # JSON string of service account key
+
+# =============================================================================
+# SCALING CONFIGURATION
+# =============================================================================
+
+# Frontend scaling
+frontend_min_capacity = 2   # Production: 2, Development: 1
+frontend_max_capacity = 10  # Production: 10, Development: 3
+
+# Backend scaling
+backend_min_capacity = 2   # Production: 2, Development: 1
+backend_max_capacity = 20  # Production: 20, Development: 5
+
+# Workers scaling
+workers_min_capacity = 1   # All environments: 1
+workers_max_capacity = 10  # Production: 10, Development: 3
+
+# =============================================================================
+# COST OPTIMIZATION
+# =============================================================================
+
+enable_spot_instances    = true      # Use Fargate Spot for cost savings
+spot_allocation_strategy = "balanced" # Options: balanced, cost-optimized
+monthly_budget_limit     = 500       # Monthly budget limit in USD
+enable_savings_plans     = false     # Enable for long-term commitments
+
+# =============================================================================
+# CONTAINER CONFIGURATION
+# =============================================================================
+
+container_cpu = {
+  frontend = 512   # 0.5 vCPU
+  backend  = 1024  # 1 vCPU
+  workers  = 512   # 0.5 vCPU
+  cron     = 256   # 0.25 vCPU
+}
+
+container_memory = {
+  frontend = 1024  # 1GB
+  backend  = 2048  # 2GB
+  workers  = 1024  # 1GB
+  cron     = 512   # 512MB
+}
+
+# =============================================================================
+# BACKUP AND DISASTER RECOVERY
+# =============================================================================
+
+backup_retention_days     = 30    # Database backup retention
+enable_cross_region_backup = false # Enable for production
+dr_region                 = "us-west-2" # Disaster recovery region
+
+# =============================================================================
+# MONITORING AND ALERTING
+# =============================================================================
+
+alert_email              = "admin@yourdomain.com"
+enable_enhanced_monitoring = true
+log_retention_days       = 30  # CloudWatch log retention
+
+# =============================================================================
+# SECURITY FEATURES
+# =============================================================================
+
+enable_waf = true  # Enable AWS WAF for application firewall
+
+# =============================================================================
+# FEATURE FLAGS
+# =============================================================================
+
+enable_sso          = true
+enable_multi_tenant = false  # Enable for SaaS deployment
+enable_ai_features  = false  # Enable for AI-powered features
+
+# OpenAI API Key (if AI features enabled)
+openai_api_key = ""
+
+# =============================================================================
+# DEVELOPMENT/DEBUG SETTINGS
+# =============================================================================
+
+enable_debug_logs        = false  # Enable debug logging
+enable_development_tools = false  # Enable development endpoints
+
+# =============================================================================
+# ADDITIONAL TAGS
+# =============================================================================
+
+additional_tags = {
+  Owner       = "DevOps Team"
+  CostCenter  = "Engineering"
+  Department  = "Technology"
+  Application = "Postiz-SSO"
+}
+
+cost_center    = "Engineering"
+project_owner  = "DevOps Team"
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC CONFIGURATIONS
+# =============================================================================
+
+# For Production Environment:
+# - Set enable_spot_instances = false for critical workloads
+# - Increase backup_retention_days to 30
+# - Enable enable_cross_region_backup = true
+# - Set enable_enhanced_monitoring = true
+# - Use larger container sizes for better performance
+
+# For Development Environment:
+# - Set enable_spot_instances = true for cost savings
+# - Reduce backup_retention_days to 7
+# - Set enable_cross_region_backup = false
+# - Use smaller container sizes
+# - Reduce min_capacity to 1 for all services
+
+# For Staging Environment:
+# - Similar to production but with reduced capacity
+# - Test disaster recovery procedures
+# - Validate monitoring and alerting

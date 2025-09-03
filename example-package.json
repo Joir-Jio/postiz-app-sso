@@ -1,0 +1,15 @@
+{
+  "name": "postiz-sso-example",
+  "version": "1.0.0",
+  "description": "Example external app integrating with Postiz SSO",
+  "main": "example-external-app.js",
+  "scripts": {
+    "start": "node example-external-app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "author": "Postiz SSO Team",
+  "license": "MIT"
+}

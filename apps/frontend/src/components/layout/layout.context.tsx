@@ -41,6 +41,12 @@ function LayoutContextInner(params: { children: ReactNode }) {
         response?.headers?.get('Impersonate');
       const logout =
         response?.headers?.get('logout') || response?.headers?.get('Logout');
+      // SSO specific headers
+      const ssoContext =
+        response?.headers?.get('sso-context') || response?.headers?.get('Sso-Context');
+      const productKey =
+        response?.headers?.get('product-key') || response?.headers?.get('Product-Key');
+
       if (headerAuth) {
         setCookie('auth', headerAuth, 365);
       }
@@ -50,11 +56,29 @@ function LayoutContextInner(params: { children: ReactNode }) {
       if (impersonate) {
         setCookie('impersonate', impersonate, 365);
       }
+      // Handle SSO context cookies
+      if (ssoContext) {
+        setCookie('sso-context', ssoContext, 1); // Short-lived SSO context
+      }
+      if (productKey) {
+        setCookie('product-key', productKey, 1); // Short-lived product context
+      }
+      
       if (logout && !isSecured) {
         setCookie('auth', '', -10);
         setCookie('showorg', '', -10);
         setCookie('impersonate', '', -10);
-        window.location.href = '/';
+        // Clear SSO cookies on logout
+        setCookie('sso-context', '', -10);
+        setCookie('product-key', '', -10);
+        
+        // Handle SSO logout redirect
+        const ssoLogoutUrl = response?.headers?.get('sso-logout-url');
+        if (ssoLogoutUrl) {
+          window.location.href = ssoLogoutUrl;
+        } else {
+          window.location.href = '/';
+        }
         return true;
       }
       const reloadOrOnboarding =

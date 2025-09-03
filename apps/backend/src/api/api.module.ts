@@ -36,6 +36,11 @@ import { McpController } from '@gitroom/backend/api/routes/mcp.controller';
 import { SetsController } from '@gitroom/backend/api/routes/sets.controller';
 import { ThirdPartyController } from '@gitroom/backend/api/routes/third-party.controller';
 import { MonitorController } from '@gitroom/backend/api/routes/monitor.controller';
+import { SsoLoginController } from '@gitroom/backend/api/routes/sso-login.controller';
+import { DirectLoginController } from '@gitroom/backend/api/routes/direct-login.controller';
+import { GcsMediaScannerService } from '@gitroom/backend/services/media/gcs-media-scanner.service';
+// Temporarily disable MediaReferenceModule due to SSO dependencies
+// import { MediaReferenceModule } from '@gitroom/backend/services/media/media-reference.module';
 
 const authenticatedController = [
   UsersController,
@@ -57,7 +62,10 @@ const authenticatedController = [
   ThirdPartyController,
 ];
 @Module({
-  imports: [UploadModule],
+  imports: [
+    UploadModule,
+    // MediaReferenceModule // Temporarily disabled due to SSO dependencies
+  ],
   controllers: [
     RootController,
     StripeController,
@@ -65,6 +73,8 @@ const authenticatedController = [
     PublicController,
     McpController,
     MonitorController,
+    SsoLoginController, // SSO令牌登录端点（不需要认证）
+    DirectLoginController, // 直接URL登录端点（不需要认证）
     ...authenticatedController,
   ],
   providers: [
@@ -81,6 +91,7 @@ const authenticatedController = [
     ShortLinkService,
     Nowpayments,
     McpService,
+    GcsMediaScannerService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];

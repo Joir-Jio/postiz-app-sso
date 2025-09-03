@@ -47,6 +47,19 @@ export class MediaRepository {
     });
   }
 
+  deleteFile(org: string, filePath: string) {
+    return this._media.model.media.updateMany({
+      where: {
+        path: filePath,
+        organizationId: org,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+  }
+
   saveMediaInformation(org: string, data: SaveMediaInformationDto) {
     return this._media.model.media.update({
       where: {

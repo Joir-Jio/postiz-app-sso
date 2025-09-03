@@ -1,0 +1,126 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "postiz-sso-alb" ],
+          [ ".", "TargetResponseTime", ".", "." ],
+          [ ".", "HTTPCode_Target_2XX_Count", ".", "." ],
+          [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+          [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "Application Load Balancer Metrics",
+        "period": 300,
+        "stat": "Sum"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 0,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ECS", "CPUUtilization", "ServiceName", "postiz-frontend", "ClusterName", "postiz-sso" ],
+          [ "...", "postiz-backend", ".", "." ],
+          [ "...", "postiz-workers", ".", "." ],
+          [ ".", "MemoryUtilization", "ServiceName", "postiz-frontend", "ClusterName", "postiz-sso" ],
+          [ "...", "postiz-backend", ".", "." ],
+          [ "...", "postiz-workers", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "ECS Service Metrics",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 6,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "postiz-sso-db" ],
+          [ ".", "DatabaseConnections", ".", "." ],
+          [ ".", "FreeStorageSpace", ".", "." ],
+          [ ".", "ReadLatency", ".", "." ],
+          [ ".", "WriteLatency", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "RDS Database Metrics",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 6,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/ElastiCache", "CPUUtilization", "CacheClusterId", "postiz-sso-redis" ],
+          [ ".", "CurrConnections", ".", "." ],
+          [ ".", "CacheHits", ".", "." ],
+          [ ".", "CacheMisses", ".", "." ],
+          [ ".", "NetworkBytesIn", ".", "." ],
+          [ ".", "NetworkBytesOut", ".", "." ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "Redis Cache Metrics",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 6,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "metrics": [
+          [ "AWS/S3", "NumberOfObjects", "BucketName", "postiz-sso-media-prod", "StorageType", "AllStorageTypes" ],
+          [ ".", "BucketSizeBytes", ".", ".", ".", "StandardStorage" ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "us-east-1",
+        "title": "S3 Storage Metrics",
+        "period": 86400,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "log",
+      "x": 0,
+      "y": 12,
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "query": "SOURCE '/ecs/postiz-frontend' | SOURCE '/ecs/postiz-backend' | SOURCE '/ecs/postiz-workers'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100",
+        "region": "us-east-1",
+        "title": "Application Error Logs",
+        "view": "table"
+      }
+    }
+  ]
+}

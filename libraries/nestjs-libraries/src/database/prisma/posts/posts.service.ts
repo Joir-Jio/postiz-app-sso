@@ -167,37 +167,72 @@ export class PostsService {
   async updateMedia(id: string, imagesList: any[], convertToJPEG = false) {
     try {
       let imageUpdateNeeded = false;
-      const getImageList = await Promise.all(
-        (
-          await Promise.all(
-            (imagesList || []).map(async (p: any) => {
-              if (!p.path && p.id) {
-                imageUpdateNeeded = true;
-                return this._mediaService.getMediaById(p.id);
-              }
+      const rawImageList = await Promise.all(
+        (imagesList || []).map(async (p: any) => {
+          if (!p.path && p.id) {
+            imageUpdateNeeded = true;
+            return this._mediaService.getMediaById(p.id);
+          }
 
-              return p;
-            })
-          )
-        )
-          .map((m) => {
+          return p;
+        })
+      );
+      
+      const processedImageList = await Promise.all(
+        rawImageList.map(async (m) => {
+            let finalPath = m.path;
+            
+            // Generate signed URL for GCS paths during posting
+            if (finalPath && finalPath.includes('storage.googleapis.com') && !finalPath.includes('X-Goog-Algorithm')) {
+              console.log(`🔐 PostsService: Generating signed URL for media: ${finalPath}`);
+              try {
+                // Extract the bucket and file path from the URL
+                const urlParts = finalPath.replace('https://storage.googleapis.com/', '').split('/');
+                const bucket = urlParts[0];
+                const filePath = urlParts.slice(1).join('/');
+                
+                // Import GCS and generate signed URL
+                const { Storage } = await import('@google-cloud/storage');
+                const storage = new Storage({
+                  keyFilename: process.env.GCS_KEY_FILENAME,
+                  projectId: process.env.GCS_PROJECT_ID,
+                });
+                
+                const file = storage.bucket(bucket).file(filePath);
+                const [signedUrl] = await file.getSignedUrl({
+                  action: 'read',
+                  expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+                  version: 'v4',
+                });
+                
+                finalPath = signedUrl;
+                console.log(`✅ PostsService: Generated signed URL for posting: ${signedUrl.substring(0, 100)}...`);
+              } catch (signError) {
+                console.error(`❌ PostsService: Failed to generate signed URL for ${finalPath}:`, (signError as any)?.message);
+                // Continue with original path if signing fails
+              }
+            }
+            
             return {
               ...m,
               url:
-                m.path.indexOf('http') === -1
+                finalPath.indexOf('http') === -1
                   ? process.env.FRONTEND_URL +
                     '/' +
                     process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
-                    m.path
-                  : m.path,
+                    finalPath
+                  : finalPath,
               type: 'image',
               path:
-                m.path.indexOf('http') === -1
-                  ? process.env.UPLOAD_DIRECTORY + m.path
-                  : m.path,
+                finalPath.indexOf('http') === -1
+                  ? process.env.UPLOAD_DIRECTORY + finalPath
+                  : finalPath,
             };
           })
-          .map(async (m) => {
+      );
+
+      const getImageList = await Promise.all(
+        processedImageList.map(async (m) => {
             if (!convertToJPEG) {
               return m;
             }

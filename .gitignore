@@ -58,3 +58,80 @@ Thumbs.db
 .secrets/
 libraries/plugins/src/plugins.ts
 i18n.cache
+
+# GCS service account keys - prevent key leakage
+keys/*.json
+!keys/README.md
+
+# Development and testing files
+debug-*.js
+test-*.js
+test-*.html
+*-test.js
+*-test.ts
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+gadget-*.js
+shopify-*.jsx
+shopify-*.html
+sso-*.js
+generate-*.js
+example-*.js
+iframe-*.html
+
+# JWT tokens and sensitive files
+jwt_*.txt
+*.token
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Temporary directories and files
+*-disabled-temp/
+*-temp/
+test-setup/
+cleanup-*.js
+nul
+
+# Build artifacts
+build/
+dist/
+*.tsbuildinfo
+*.map
+
+# Development scripts
+test-*.bat
+test-*.ps1
+*.local.*
+
+# AWS and deployment files (add when creating)
+.aws/
+docker-compose.override.yml
+.env.production
+.env.staging
+deployment/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Backup files
+*.backup
+*.bak
+*.swp
+*.swo
+*.tmp

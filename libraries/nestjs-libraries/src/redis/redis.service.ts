@@ -141,7 +141,7 @@ class MockRedis extends EventEmitter {
 // Create Redis client with fallback to MockRedis
 function createRedisClient(): Redis {
   if (!process.env.REDIS_URL) {
-    console.log('REDIS_URL not defined, using MockRedis');
+    console.log('❌ REDIS_URL not defined, using MockRedis');
     return new MockRedis() as unknown as Redis;
   }
 

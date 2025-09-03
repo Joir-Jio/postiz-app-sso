@@ -729,10 +729,10 @@ export const CalendarColumn: FC<{
                 <div
                   className={`w-full h-full rounded-[10px] py-[10px] flex-wrap hover:border hover:border-seventh flex justify-center items-center gap-[20px] opacity-30 grayscale hover:grayscale-0 hover:opacity-100`}
                 >
-                  {integrations.map((selectedIntegrations) => (
+                  {integrations.filter(Boolean).map((selectedIntegrations) => (
                     <div
                       className="relative"
-                      key={selectedIntegrations.identifier}
+                      key={selectedIntegrations?.identifier || 'no-key'}
                     >
                       <div
                         className={clsx(
@@ -741,14 +741,14 @@ export const CalendarColumn: FC<{
                       >
                         <Image
                           src={
-                            selectedIntegrations.picture || '/no-picture.jpg'
+                            selectedIntegrations?.picture || '/no-picture.jpg'
                           }
                           className="rounded-[8px]"
-                          alt={selectedIntegrations.identifier}
+                          alt={selectedIntegrations?.identifier || 'No integration'}
                           width={32}
                           height={32}
                         />
-                        {selectedIntegrations.identifier === 'youtube' ? (
+                        {selectedIntegrations?.identifier === 'youtube' ? (
                           <img
                             src="/icons/platforms/youtube.svg"
                             className="absolute z-10 -bottom-[5px] -end-[5px]"
@@ -756,9 +756,9 @@ export const CalendarColumn: FC<{
                           />
                         ) : (
                           <Image
-                            src={`/icons/platforms/${selectedIntegrations.identifier}.png`}
+                            src={`/icons/platforms/${selectedIntegrations?.identifier || 'default'}.png`}
                             className="rounded-[8px] absolute z-10 -bottom-[5px] -end-[5px] border border-fifth"
-                            alt={selectedIntegrations.identifier}
+                            alt={selectedIntegrations?.identifier || 'No integration'}
                             width={20}
                             height={20}
                           />
